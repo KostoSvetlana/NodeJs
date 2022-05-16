@@ -15,28 +15,30 @@ const getDateFromDateString = dateLine => {
 
 const futureDate = getDateFromDateString(userPastDate)
 const showRemainingTime = futureDate => {
-	const dateNow = new Date()
-	if (dateNow >= futureDate) {
+	const nowDate = new Date()
+	if (nowDate >= futureDate) {
 		emitter.emit('timerDone')
 	} else {
 		const futureDateFormatted = moment(futureDate, format)
-		const currentDateFormatted = moment(dateNow, format)
-		const diff = preciseDiff(futureDateFormatted, currentDateFormatted)
+		const currentDateFormatted = moment(nowDate, format)
+		
+		const odds = preciseDiff(futureDateFormatted, currentDateFormatted)
 
-		console.log(diff)
+		console.log(odds)
 	}
 }
 
-const timerId = setInterval(() => {
+const idTimer = setInterval(() => {
 	emitter.emit('timerTick', futureDate)
 }, 1009)
 
-const showTimerDone = timerId => {
-	clearInterval(timerId)
+const showTimerDone = idTimer => {
+	clearInterval(idTimer)
 	console.log('End')
 }
 
+
 emitter.on('timerTick', showRemainingTime)
 emitter.on('timerDone', () => {
-	showTimerDone(timerId)
+	showTimerDone(idTimer)
 })
