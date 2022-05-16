@@ -13,6 +13,7 @@ const getDateFromDateString = dateLine => {
 	return new Date(Date.UTC(year, month - 1, day, hour))
 }
 
+
 const futureDate = getDateFromDateString(userPastDate)
 const showRemainingTime = futureDate => {
 	const nowDate = new Date()
