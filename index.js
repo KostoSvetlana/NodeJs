@@ -1,14 +1,23 @@
-// const colors = require('colors');
-import colors from 'colors';
-// console.log(process.argv);
-// const [ name1, name2 ] = process.argv.slice(2);
+import { createReadStream, createWriteStream } from 'fs'
+import { createInterface } from 'readline'
 
-// const args = process.argv.slice(2);
-// console.log(args);
-// const [ name1, name2 ] = args;
 
-// const name1 = args[0];
-// const name2 = args[1];
-// console.log('Hello Node.js to ' + name1 + ' and ' + name2);
+const readStream = createReadStream('./access.log', 'utf8')
+const writeStream1 = createWriteStream('./34.48.240.111_requests.log')
+const writeStream2 = createWriteStream('./89.123.1.41_requests.log')
 
-console.log(colors.green('Hello World!'));
+const readline = createInterface({
+	input: readStream,
+	terminal: true,
+})
+
+readline.on("line", function (line) {
+	if (line.includes('34.48.240.111')) {
+		writeStream1.write(line + '\n')
+	}
+	
+	if (line.includes('89.123.1.41')) {
+		writeStream2.write(line + '\n')
+	}
+
+})
