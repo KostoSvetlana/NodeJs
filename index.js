@@ -1,23 +1,58 @@
-import { createReadStream, createWriteStream } from 'fs'
-import { createInterface } from 'readline'
+import fs from 'fs/promises';
+import { lstatSync } from 'fs';
+import inquirer from 'inquirer';
+import yargs from 'yargs';
+import path from 'path';
 
+let currentDirectory = process.cwd();
+const options = positional('d', {
+        describe: 'Path to directory',
+        default: process.cwd(),
+    })
+    .positional('p', {
+        describe: 'Pattern',
+        default: '',
+    }).argv;
+console.log(options);
 
-const readStream = createReadStream('./access.log', 'utf8')
-const writeStream1 = createWriteStream('./34.48.240.111_requests.log')
-const writeStream2 = createWriteStream('./89.123.1.41_requests.log')
+class ListItem {
+    constructor(path, fileName) {
+        this.path = path;
+        this.fileName = fileName;
+    }
 
-const readline = createInterface({
-	input: readStream,
-	terminal: true,
-})
+    get isDir() {
+        return lstatSync(this.path).isDirectory();
+    }
+}
 
-readline.on("line", function (line) {
-	if (line.includes('34.48.240.111')) {
-		writeStream1.write(line + '\n')
-	}
-	
-	if (line.includes('89.123.1.41')) {
-		writeStream2.write(line + '\n')
-	}
+const run = async () => {
+    const list = await readdir(currentDirectory);
+    const items = list.map(fileName =>
+        new ListItem(join(currentDirectory, fileName), fileName));
 
-})
+    const item = await prompt([
+            {
+                name: 'fileName',
+                type: 'list',
+                message: `Choose: ${currentDirectory}`,
+                choices: items.map(item => ({name: item.fileName, value: item})),
+            }
+        ])
+        .then(answer => answer.fileName);
+
+    if (item.isDir) {
+        currentDirectory = item.path;
+        return await run();
+    } else {
+        const data = await readFile(item.path, 'utf-8');
+
+        if (!options.p) console.log(data);
+        else {
+            const regExp = new RegExp(options.p, 'igm');
+            console.log(data.match(regExp).length);
+        }
+    }
+}
+
+run();
