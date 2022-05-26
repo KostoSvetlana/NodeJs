@@ -1,58 +1,41 @@
-import fs from 'fs/promises';
-import { lstatSync } from 'fs';
-import inquirer from 'inquirer';
-import yargs from 'yargs';
+import http from 'http';
 import path from 'path';
+import fs from 'fs';
 
-let currentDirectory = process.cwd();
-const options = positional('d', {
-        describe: 'Path to directory',
-        default: process.cwd(),
-    })
-    .positional('p', {
-        describe: 'Pattern',
-        default: '',
-    }).argv;
-console.log(options);
 
-class ListItem {
-    constructor(path, fileName) {
-        this.path = path;
-        this.fileName = fileName;
-    }
 
-    get isDir() {
-        return lstatSync(this.path).isDirectory();
-    }
-}
+const HTML_TEMPLATE = './index_template.html';
+const HTML_TO_DISPLAY = path.join(path.resolve(), 'index.html');
 
-const run = async () => {
-    const list = await readdir(currentDirectory);
-    const items = list.map(fileName =>
-        new ListItem(join(currentDirectory, fileName), fileName));
+const isDir = (dirPath) => fs.lstatSync(dirPath).isDirectory();
 
-    const item = await prompt([
-            {
-                name: 'fileName',
-                type: 'list',
-                message: `Choose: ${currentDirectory}`,
-                choices: items.map(item => ({name: item.fileName, value: item})),
-            }
-        ])
-        .then(answer => answer.fileName);
+http.createServer((req, res) => {
+    const fullPath = path.join(path.resolve(), req.url);
 
-    if (item.isDir) {
-        currentDirectory = item.path;
-        return await run();
+    if (isDir(fullPath)) {
+        const contentDir = fs.readdirSync(fullPath);
+
+        makeHTMLResult(displayDirContent(req.url,contentDir));
     } else {
-        const data = await readFile(item.path, 'utf-8');
-
-        if (!options.p) console.log(data);
-        else {
-            const regExp = new RegExp(options.p, 'igm');
-            console.log(data.match(regExp).length);
-        }
+        makeHTMLResult(fs.readFileSync(fullPath, 'utf-8'));
     }
-}
 
-run();
+    const readStream = fs.createReadStream(HTML_TO_DISPLAY);
+    res.writeHead(200, { 'Content-Type': 'text/html'});
+    readStream.pipe(res);
+}).listen(3993, 'localhost');
+
+const displayDirContent = (currentPath, list) => {
+    let htmlList = '';
+    htmlList += '<ul>';
+    htmlList += list.reduce((list, item) => list+=`<li><a href="${currentPath == '/' ? currentPath + item : currentPath + '/' + item}">${item}</a></li>`, '');
+    htmlList += '</ul>';
+    return htmlList;
+};
+
+
+const makeHTMLResult = (toPresent) => {
+    let template = fs.readFileSync(HTML_TEMPLATE, 'utf-8');
+    template = template.replace('{{data}}', toPresent);
+    fs.writeFileSync('./index.html', template);
+};
